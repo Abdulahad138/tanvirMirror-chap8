@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>উত্তল ও অবতল দর্পণের রশ্মিচিত্র সিমুলেশন</title>
+    <!-- Tailwind CSS for modern styling -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', 'Noto Serif Bengali', sans-serif; }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 min-h-screen flex flex-col items-center justify-between p-4 md:p-8">
+    <header class="w-full max-w-4xl text-center mb-6">
+        <h1 class="text-2xl md:text-3xl font-bold text-indigo-700 mb-2">গোলীয় দর্পণে গঠিত প্রতিবিম্বের রশ্মিচিত্র</h1>
+        <p class="text-slate-600 text-sm md:text-base">Interactive Convex & Concave Mirror Ray Diagram Simulation</p>
+    </header>
+
+    <main class="w-full max-w-4xl bg-white rounded-2xl shadow-xl overflow-hidden border border-slate-100 flex flex-col">
+        
+        <!-- Mirror Type Selector & Canvas Container -->
+        <div class="bg-slate-900 flex flex-col items-center">
+            <!-- Selector Tabs -->
+            <div class="flex bg-slate-800 p-1.5 rounded-xl border border-slate-700 my-4 shadow-inner">
+                <button id="btnConcave" onclick="setMirrorType('concave')" class="px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white">
+                    অবতল দর্পণ (Concave)
+                </button>
+                <button id="btnConvex" onclick="setMirrorType('convex')" class="px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white">
+                    উত্তল দর্পণ (Convex)
+                </button>
+            </div>
+
+            <div class="relative w-full aspect-[16/9] md:aspect-[2/1] min-h-[300px] overflow-hidden flex items-center justify-center bg-slate-950">
+                <canvas id="mirrorCanvas" class="w-full h-full block"></canvas>
+                <div class="absolute top-4 left-4 bg-slate-800/80 backdrop-blur-md text-white text-xs px-3 py-1.5 rounded-lg border border-slate-700 shadow-sm flex items-center gap-2">
+                    <span class="inline-block w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+                    <span id="currentModeLabel">অবতল দর্পণ</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 md:p-8 grid grid-cols-1 md:grid-cols-2 gap-6 bg-white">
+            <!-- Control Panel -->
+            <div class="space-y-4">
+                <h3 class="font-bold text-lg text-slate-800 border-b pb-2">➿ Control Panel⏳ </h3>
+
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-1">
+                        <label for="objSlider" class="text-slate-600">বস্তুর দূরত্ব (u, m):</label>
+                        <span id="objDistVal" class="text-indigo-600 font-bold">1.40 m</span>
+                    </div>
+                    <input type="range" id="objSlider" min="0.30" max="3.50" step="0.01" value="1.40" class="w-full accent-indigo-600 cursor-pointer">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-1">
+                        <label for="heightSlider" class="text-slate-600">বস্তুর উচ্চতা (h, m):</label>
+                        <span id="objHeightVal" class="text-indigo-600 font-bold">0.85 m</span>
+                    </div>
+                    <input type="range" id="heightSlider" min="0.40" max="1.30" step="0.01" value="0.85" class="w-full accent-indigo-600 cursor-pointer">
+                </div>
+
+                <div>
+                    <div class="flex justify-between text-sm font-medium mb-1">
+                        <label for="focalSlider" class="text-slate-600">ফোকাস দূরত্ব (f, m):</label>
+                        <span id="focalVal" class="text-indigo-600 font-bold">1.00 m</span>
+                    </div>
+                    <input type="range" id="focalSlider" min="0.40" max="1.50" step="0.01" value="1.00" class="w-full accent-indigo-600 cursor-pointer">
+                </div>
+
+                <div class="space-y-2 text-sm pt-2">
+                    <label class="flex items-center gap-2 text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="showRay1" checked class="accent-indigo-600">
+                        <span>সমান্তরাল রশ্মি (হলুদ)</span>
+                    </label>
+                    <label class="flex items-center gap-2 text-slate-600 cursor-pointer">
+                        <input type="checkbox" id="showRay2" checked class="accent-indigo-600">
+                        <span>বক্রতা কেন্দ্র / ফোকাসগামী রশ্মি (নীল)</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Stats and Info Panel -->
+            <div class="space-y-4 flex flex-col justify-between">
+                <h3 class="font-bold text-lg text-slate-800 border-b pb-2">প্রতিবিম্বের বৈশিষ্ট্য</h3>
+                <div class="bg-indigo-50/60 p-4 rounded-xl border border-indigo-100 text-sm space-y-3">
+                    <div class="flex justify-between gap-3">
+                        <span class="text-slate-600">প্রতিবিম্বের প্রকৃতি:</span>
+                        <span id="statNature" class="font-semibold text-indigo-900 text-right">বাস্তব ও উল্টো</span>
+                    </div>
+                    <div class="flex justify-between gap-3">
+                        <span class="text-slate-600">প্রতিবিম্বের আকার:</span>
+                        <span id="statSize" class="font-semibold text-emerald-600 text-right">সমান</span>
+                    </div>
+                    <div class="flex justify-between gap-3">
+                        <span class="text-slate-600">প্রতিবিম্বের দূরত্ব (v, m):</span>
+                        <span id="statV" class="font-bold text-indigo-700">1.00 m</span>
+                    </div>
+                    <div class="flex justify-between gap-3">
+                        <span class="text-slate-600">বিবর্ধন (m):</span>
+                        <span id="statM" class="font-bold text-indigo-700">-1.00</span>
+                    </div>
+                </div>
+                <ul class="text-sm text-slate-600 space-y-1.5 list-disc list-inside">
+                    <li><strong class="text-slate-700">P:</strong> দর্পণের মেরু, <strong>F:</strong> ফোকাস, <strong>C:</strong> বক্রতার কেন্দ্র।</li>
+                    <li id="dynamicTip">অবতল দর্পণে বস্তুর অবস্থানের ওপর ভিত্তি করে বাস্তব বা অবাস্তব প্রতিবিম্ব গঠিত হতে পারে।</li>
+                </ul>
+            </div>
+        </div>
+    </main>
+
+    <section class="w-full max-w-4xl mt-6 bg-white rounded-2xl shadow-lg border border-slate-100 p-6 md:p-8" aria-labelledby="explanationTitle">
+        <h2 id="explanationTitle" class="font-bold text-xl text-indigo-700 border-b pb-3 mb-4">প্রতিবিম্বের ব্যাখ্যা</h2>
+        <div id="concaveExplanation" class="space-y-3 text-sm md:text-base text-slate-600 leading-relaxed">
+            <h3 class="font-bold text-lg text-slate-800">অবতল দর্পণ (Concave Mirror)</h3>
+            <p><strong>সংজ্ঞা:</strong> যে গোলীয় দর্পণের অবতল বা ভেতরের পৃষ্ঠ প্রতিফলক হিসেবে কাজ করে, তাকে অবতল দর্পণ বলে। সাধারণত এর বাইরের পৃষ্ঠে প্রতিফলক প্রলেপ দেওয়া থাকে।</p>
+            <p><strong>বৈশিষ্ট্য:</strong> অবতল দর্পণ আপতিত আলোকরশ্মিকে অভিসারী করে, অর্থাৎ প্রতিফলিত রশ্মিগুলোকে ফোকাসের দিকে মিলিত করে। বস্তুর অবস্থানের ওপর নির্ভর করে এতে বাস্তব ও উল্টো অথবা অবাস্তব ও সোজা প্রতিবিম্ব তৈরি হতে পারে। প্রতিবিম্ব ছোট, সমান বা বড় হতে পারে।</p>
+            <p><strong>ব্যবহার:</strong> দাড়ি কামানোর বা বিবর্ধক আয়না, ডেন্টাল মিরর, সার্চলাইট ও গাড়ির হেডলাইটে অবতল দর্পণ ব্যবহৃত হয়।</p>
+        </div>
+        <div id="convexExplanation" class="hidden space-y-3 text-sm md:text-base text-slate-600 leading-relaxed">
+            <h3 class="font-bold text-lg text-slate-800">উত্তল দর্পণ (Convex Mirror)</h3>
+            <p><strong>সংজ্ঞা:</strong> যে গোলীয় দর্পণের উত্তল বা বাইরের পৃষ্ঠ প্রতিফলক হিসেবে কাজ করে, তাকে উত্তল দর্পণ বলে। সাধারণত এর ভেতরের অবতল পৃষ্ঠে প্রতিফলক প্রলেপ দেওয়া থাকে।</p>
+            <p><strong>বৈশিষ্ট্য:</strong> উত্তল দর্পণ আপতিত আলোকরশ্মিকে অপসারী করে, অর্থাৎ প্রতিফলিত রশ্মিগুলো চারদিকে ছড়িয়ে পড়ে। এতে প্রতিবিম্ব সর্বদা অবাস্তব, সোজা, খর্বিত এবং দর্পণের পেছনে গঠিত হয়। এর দৃষ্টিক্ষেত্র বড় হওয়ায় বিস্তৃত এলাকার দৃশ্য দেখা যায়।</p>
+            <p><strong>ব্যবহার:</strong> যানবাহনের রিয়ার-ভিউ মিরর এবং রাস্তার অন্ধ মোড়ে নিরাপত্তা দর্পণ হিসেবে উত্তল দর্পণ ব্যবহৃত হয়।</p>
+        </div>
+    </section>
+
+    <footer class="mt-8 text-center text-xs text-slate-400">Spherical Mirrors Physics Simulation &copy; 2026 | Developed by Tanvir | <a href="https://www.facebook.com/mybe.tanvir/" target="_blank" rel="noopener noreferrer" class="text-indigo-500 hover:text-indigo-700 underline">contact on facebook</a></footer>
+
+    <script>
+        const canvas = document.getElementById('mirrorCanvas');
+        const ctx = canvas.getContext('2d');
+        const objSlider = document.getElementById('objSlider');
+        const heightSlider = document.getElementById('heightSlider');
+        const focalSlider = document.getElementById('focalSlider');
+        const showRay1 = document.getElementById('showRay1');
+        const showRay2 = document.getElementById('showRay2');
+
+        let mirrorType = 'concave'; // 'concave' or 'convex'
+
+        function setMirrorType(type) {
+            mirrorType = type;
+            document.getElementById('concaveExplanation').classList.toggle('hidden', type !== 'concave');
+            document.getElementById('convexExplanation').classList.toggle('hidden', type !== 'convex');
+            const btnConcave = document.getElementById('btnConcave');
+            const btnConvex = document.getElementById('btnConvex');
+            const modeLabel = document.getElementById('currentModeLabel');
+
+            if (type === 'concave') {
+                btnConcave.className = "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-indigo-600 text-white shadow-md";
+                btnConvex.className = "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white";
+                modeLabel.textContent = "অবতল দর্পণ";
+                objSlider.min = "0.30";
+                objSlider.max = "3.50";
+            } else {
+                btnConvex.className = "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 bg-indigo-600 text-white shadow-md";
+                btnConcave.className = "px-5 py-2 rounded-lg text-sm font-semibold transition-all duration-200 text-slate-300 hover:text-white";
+                modeLabel.textContent = "উত্তল দর্পণ";
+                objSlider.min = "0.50";
+                objSlider.max = "2.80";
+                if (Number(objSlider.value) > 2.8) objSlider.value = "1.40";
+            }
+            drawRayDiagram();
+        }
+
+        function resizeCanvas() {
+            const container = canvas.parentElement;
+            canvas.width = container.clientWidth;
+            canvas.height = container.clientHeight;
+            drawRayDiagram();
+        }
+
+        function drawArrow(fromX, fromY, toX, toY, color, width = 2, dashed = false) {
+            ctx.save();
+            ctx.strokeStyle = color;
+            ctx.fillStyle = color;
+            ctx.lineWidth = width;
+            ctx.setLineDash(dashed ? [5, 4] : []);
+            ctx.beginPath();
+            ctx.moveTo(fromX, fromY);
+            ctx.lineTo(toX, toY);
+            ctx.stroke();
+
+            ctx.setLineDash([]);
+            const angle = Math.atan2(toY - fromY, toX - fromX);
+            const head = 9;
+            ctx.beginPath();
+            ctx.moveTo(toX, toY);
+            ctx.lineTo(toX - head * Math.cos(angle - Math.PI / 6), toY - head * Math.sin(angle - Math.PI / 6));
+            ctx.lineTo(toX - head * Math.cos(angle + Math.PI / 6), toY - head * Math.sin(angle + Math.PI / 6));
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+        }
+
+        function drawRayDiagram() {
+            const w = canvas.width;
+            const h = canvas.height;
+            if (!w || !h) return;
+            ctx.clearRect(0, 0, w, h);
+
+            const centerY = h / 2;
+            const mirrorX = mirrorType === 'concave' ? w * 0.55 : w * 0.58;
+            const u = Number(objSlider.value);
+            const objectHeight = Number(heightSlider.value);
+            const fDist = Number(focalSlider.value);
+
+            // Optimal dynamic scaling for clear view inside canvas
+            const maxSpan = Math.max(u * 100, (mirrorType === 'concave' ? 2 * fDist * 100 : fDist * 100), 220);
+            const scale = Math.min(1.1, (mirrorX - 50) / maxSpan, (w - mirrorX - 50) / (maxSpan * 1.1), (h * 0.42) / 130);
+            
+            const f = fDist * 100 * scale;
+            const uDraw = u * 100 * scale;
+            const objectHeightDraw = objectHeight * 100 * scale;
+
+            let Fx, Cx;
+            if (mirrorType === 'concave') {
+                Fx = mirrorX - f;
+                Cx = mirrorX - 2 * f;
+            } else {
+                Fx = mirrorX + f;
+                Cx = mirrorX + 2 * f;
+            }
+
+            const objX = mirrorX - uDraw;
+            const objY = centerY - objectHeightDraw;
+
+            // Principal axis
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1.5;
+            ctx.setLineDash([4, 4]);
+            ctx.beginPath();
+            ctx.moveTo(20, centerY);
+            ctx.lineTo(w - 20, centerY);
+            ctx.stroke();
+            ctx.setLineDash([]);
+
+            // Mirror surface and coated back shading
+            const radius = Math.max(2 * f, 100 * scale);
+            const arcAngle = 0.50;
+            ctx.strokeStyle = '#38bdf8';
+            ctx.lineWidth = 5;
+            ctx.beginPath();
+
+            if (mirrorType === 'concave') {
+                ctx.arc(mirrorX - radius, centerY, radius, -arcAngle, arcAngle, false);
+                ctx.stroke();
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1;
+                for (let angle = -arcAngle; angle <= arcAngle; angle += 0.08) {
+                    const x = mirrorX - radius + radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x - 8 * scale, y + 5 * scale);
+                    ctx.stroke();
+                }
+            } else {
+                ctx.arc(mirrorX + radius, centerY, radius, Math.PI - arcAngle, Math.PI + arcAngle, false);
+                ctx.stroke();
+                ctx.strokeStyle = '#64748b';
+                ctx.lineWidth = 1;
+                for (let angle = -arcAngle; angle <= arcAngle; angle += 0.08) {
+                    const x = mirrorX + radius - radius * Math.cos(angle);
+                    const y = centerY + radius * Math.sin(angle);
+                    ctx.beginPath();
+                    ctx.moveTo(x, y);
+                    ctx.lineTo(x + 8 * scale, y + 5 * scale);
+                    ctx.stroke();
+                }
+            }
+
+            // Pole, focus and centre of curvature points
+            [
+                { x: mirrorX, label: 'P' },
+                { x: Fx, label: 'F' },
+                { x: Cx, label: 'C' }
+            ].forEach(point => {
+                ctx.fillStyle = '#fb7185';
+                ctx.beginPath();
+                ctx.arc(point.x, centerY, 4, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.fillStyle = '#e2e8f0';
+                ctx.font = '12px Inter, sans-serif';
+                ctx.fillText(point.label, point.x - 4, centerY + 20);
+            });
+
+            // Object rendering
+            drawArrow(objX, centerY, objX, objY, '#a855f7', 3);
+            ctx.fillStyle = '#c084fc';
+            ctx.font = 'bold 13px Inter, sans-serif';
+            ctx.fillText('বস্তু', objX - 15, objY - 9);
+
+            // Calculations
+            let v, magnification;
+            if (mirrorType === 'concave') {
+                if (Math.abs(u - fDist) < 0.01) {
+                    v = 999999; // at infinity
+                } else {
+                    v = (fDist * u) / (u - fDist);
+                }
+                magnification = -v / u;
+            } else {
+                v = (fDist * u) / (fDist + u);
+                magnification = v / u;
+            }
+
+            const imgX = mirrorType === 'concave' ? mirrorX - v * 100 * scale : mirrorX + v * 100 * scale;
+            const imgY = centerY - objectHeightDraw * magnification;
+
+            // Stats update & UI text logic
+            let natureText = '', sizeText = '', tipText = '';
+            if (mirrorType === 'concave') {
+                if (u < fDist) {
+                    natureText = 'অবাস্তব ও সোজা (Virtual & Erect)';
+                    tipText = 'অবতল দর্পণে ফোকাসের ভেতরে বস্তু রাখলে অবাস্তব ও বিবর্ধিত প্রতিবিম্ব গঠিত হয়।';
+                    if (Math.abs(magnification) > 1) sizeText = 'বিবর্ধিত / বড় (Magnified)';
+                    else sizeText = 'খর্বিত';
+                } else if (Math.abs(u - fDist) < 0.02) {
+                    natureText = 'অসীম দূরত্বে বাস্তব';
+                    tipText = 'বস্তু ফোকাসে থাকলে প্রতিবিম্ব অসীম দূরত্বে গঠিত হয়।';
+                    sizeText = 'অত্যন্ত বিবর্ধিত';
+                } else if (u > fDist && u < 2 * fDist) {
+                    natureText = 'বাস্তব ও উল্টো (Real & Inverted)';
+                    tipText = 'ফোকাস ও বক্রতার কেন্দ্রের মাঝে বস্তু থাকলে প্রতিবিম্ব কেন্দ্রের বাইরে ও বড় হয়।';
+                    sizeText = 'বিবর্ধিত / বড় (Magnified)';
+                } else if (Math.abs(u - 2 * fDist) < 0.02) {
+                    natureText = 'বাস্তব ও উল্টো (Real & Inverted)';
+                    tipText = 'বস্তু বক্রতার কেন্দ্রে থাকলে সমান সাইজের বাস্তব প্রতিবিম্ব গঠিত হয়।';
+                    sizeText = 'সমান (Equal)';
+                } else {
+                    natureText = 'বাস্তব ও উল্টো (Real & Inverted)';
+                    tipText = 'বক্রতার কেন্দ্রের বাইরে বস্তু থাকলে প্রতিবিম্ব F ও C এর মাঝে ছোট হয়।';
+                    sizeText = 'খর্বিত / ছোট (Diminished)';
+                }
+            } else {
+                natureText = 'অবাস্তব ও সোজা (Virtual & Erect)';
+                sizeText = 'খর্বিত / ছোট (Diminished)';
+                tipText = 'উত্তল দর্পণে প্রতিবিম্ব সর্বদা দর্পণের পেছনে, সোজা ও ছোট হয়।';
+            }
+
+            document.getElementById('statNature').textContent = natureText;
+            document.getElementById('statSize').textContent = sizeText;
+            document.getElementById('dynamicTip').textContent = tipText;
+
+            document.getElementById('objDistVal').textContent = `${u.toFixed(2)} m`;
+            document.getElementById('objHeightVal').textContent = `${objectHeight.toFixed(2)} m`;
+            document.getElementById('focalVal').textContent = `${fDist.toFixed(2)} m`;
+
+            if (Math.abs(v) > 50 || imgX < -200 || imgX > w + 200) {
+                document.getElementById('statV').textContent = 'অসীম (Infinity)';
+                document.getElementById('statM').textContent = 'অসীম';
+            } else {
+                document.getElementById('statV').textContent = `${Math.abs(v).toFixed(2)} m`;
+                document.getElementById('statM').textContent = magnification.toFixed(2);
+            }
+
+            // Draw Image Arrow if within view boundaries
+            if (Math.abs(v) <= 50 && imgX >= -50 && imgX <= w + 50) {
+                const isVirtual = (mirrorType === 'concave' && u < fDist) || (mirrorType === 'convex');
+                drawArrow(imgX, centerY, imgX, imgY, '#34d399', 2.5, isVirtual);
+                ctx.fillStyle = '#6ee7b7';
+                ctx.font = 'bold 13px Inter, sans-serif';
+                ctx.fillText('প্রতিবিম্ব', imgX + 8, imgY - 8);
+            }
+
+            // Ray 1: Parallel incident ray & reflection
+            if (showRay1.checked) {
+                drawArrow(objX, objY, mirrorX, objY, '#f59e0b', 2);
+                if (mirrorType === 'concave') {
+                    // Reflected ray passes through F (or extends for virtual image)
+                    if (u < fDist) {
+                        // Virtual image case: draw reflection away and dashed extension to F
+                        drawArrow(mirrorX, objY, mirrorX + 120 * scale, objY - 140 * scale, '#f59e0b', 2);
+                        ctx.save();
+                        ctx.strokeStyle = '#f59e0b';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(mirrorX, objY);
+                        ctx.lineTo(Fx, centerY);
+                        ctx.stroke();
+                        ctx.restore();
+                    } else {
+                        // Real image case: passes cleanly through Fx
+                        const slope = (centerY - objY) / (Fx - mirrorX);
+                        const endX = Math.max(20, Fx - 150 * scale);
+                        const endY = centerY + slope * (endX - Fx);
+                        drawArrow(mirrorX, objY, endX, endY, '#f59e0b', 2);
+                    }
+                } else {
+                    const rayLength = Math.max(mirrorX - 25, 50);
+                    const reflectedEndX = Math.max(20, mirrorX - rayLength);
+                    const reflectedEndY = objY - (objectHeightDraw / f) * (mirrorX - reflectedEndX);
+                    drawArrow(mirrorX, objY, reflectedEndX, reflectedEndY, '#f59e0b', 2);
+
+                    ctx.save();
+                    ctx.strokeStyle = '#f59e0b';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(mirrorX, objY);
+                    ctx.lineTo(Fx, centerY);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+
+            // Ray 2: Through C / Focus / Pole ray
+            if (showRay2.checked) {
+                if (mirrorType === 'concave') {
+                    if (u < fDist) {
+                        // Ray directed towards C
+                        const hitY = centerY - objectHeightDraw * (Cx - mirrorX) / (Cx - objX);
+                        drawArrow(objX, objY, mirrorX, hitY, '#38bdf8', 2);
+                        drawArrow(mirrorX, hitY, mirrorX + 140 * scale, hitY + (hitY - centerY) * 1.2, '#38bdf8', 2);
+                        ctx.save();
+                        ctx.strokeStyle = '#38bdf8';
+                        ctx.lineWidth = 1.5;
+                        ctx.setLineDash([4, 4]);
+                        ctx.beginPath();
+                        ctx.moveTo(mirrorX, hitY);
+                        ctx.lineTo(Cx, centerY);
+                        ctx.stroke();
+                        ctx.restore();
+                    } else {
+                        // Ray passing through C
+                        const hitY = centerY - objectHeightDraw * (Cx - mirrorX) / (Cx - objX);
+                        drawArrow(objX, objY, mirrorX, hitY, '#38bdf8', 2);
+                        drawArrow(mirrorX, hitY, objX, objY, '#38bdf8', 2);
+                    }
+                } else {
+                    const hitY = centerY - objectHeightDraw * (Cx - mirrorX) / (Cx - objX);
+                    drawArrow(objX, objY, mirrorX, hitY, '#38bdf8', 2);
+                    drawArrow(mirrorX, hitY, objX, objY, '#38bdf8', 2);
+
+                    ctx.save();
+                    ctx.strokeStyle = '#38bdf8';
+                    ctx.lineWidth = 1.5;
+                    ctx.setLineDash([4, 4]);
+                    ctx.beginPath();
+                    ctx.moveTo(mirrorX, hitY);
+                    ctx.lineTo(Cx, centerY);
+                    ctx.stroke();
+                    ctx.restore();
+                }
+            }
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        [objSlider, heightSlider, focalSlider, showRay1, showRay2].forEach(control => {
+            control.addEventListener('input', drawRayDiagram);
+            control.addEventListener('change', drawRayDiagram);
+        });
+
+        // Initialize default view to concave
+        setMirrorType('concave');
+        resizeCanvas();
+    </script>
+</body>
+</html>
